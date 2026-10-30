@@ -1,0 +1,106 @@
+** sch_path: /foss/designs/Amplifier-Design/single_ended_opamp/xschem/tb_OTA_gf180_loopGain_mb.sch
+**.subckt tb_OTA_gf180_loopGain_mb
+vdd vdd GND 5
+vd1 vss GND 0
+vd2 vip GND DC=2.5
+C1 vr1 GND 1.5p
+I0 vdd net1 5u
+x1 vdd vip vf1 vr1 net1 vss BUFFER_OTA_1
+C2 net2 GND 1.5p
+I1 vdd net4 5u
+Vtest2 vf1 vr1 dc 0 ac 1
+Vir1 net2 net5 0
+.save i(vir1)
+Vif1 net5 net3 0
+.save i(vif1)
+Itest1 GND net5 dc 0 ac 1
+x2 vdd vip net3 net2 net4 vss BUFFER_OTA_1
+**** begin user architecture code
+
+.include /foss/pdks/gf180mcuD/libs.tech/ngspice/design.ngspice
+.lib /foss/pdks/gf180mcuD/libs.tech/ngspice/sm141064.ngspice typical
+.lib /foss/pdks/gf180mcuD/libs.tech/ngspice/sm141064.ngspice cap_mim
+.lib /foss/pdks/gf180mcuD/libs.tech/ngspice/sm141064.ngspice res_typical
+.lib /foss/pdks/gf180mcuD/libs.tech/ngspice/sm141064.ngspice moscap_typical
+.lib /foss/pdks/gf180mcuD/libs.tech/ngspice/sm141064.ngspice mimcap_typical
+
+
+
+.param temp=27
+.options savecurrents reltol=1e-3 abstol=1e-12 gmin=1e-15
+.control
+save all
+
+* Operating Point Analysis
+op
+remzerovec
+write tb_OTA_gf180_loogGain_mb.raw
+set appendwrite
+
+* AC Analysis
+ac dec 101 1 100G
+remzerovec
+write tb_OTA_gf180_loogGain_mb.raw
+set appendwrite
+
+* Middlebrook's Method
+let tv=-v(vr1)/v(vf1)
+let ti=-i(vir1)/i(vif1)
+let tmb=(tv*ti - 1)/(tv + ti + 2)
+
+let gain_db = db(tmb)
+let phase_unwrapped = 180/pi*cphase(tmb)
+
+plot gain_dB ylabel 'Magnitude '
+plot phase_unwrapped ylabel 'Phase '
+
+meas ac A0_db find gain_db at=10
+meas ac UGB when gain_db=0 fall=1
+meas ac PHASE_UGB find phase_unwrapped at=$&UGB
+
+
+let PM = 180 + PHASE_UGB
+
+print A0_db UGB PHASE_UGB pm
+
+write tb_OTA_gf180_loogGain_mb.raw
+
+*quit
+.endc
+
+
+**** end user architecture code
+**.ends
+
+* expanding   symbol:  /foss/designs/BUFFER_OTA_1.sym # of pins=6
+** sym_path: /foss/designs/BUFFER_OTA_1.sym
+** sch_path: /foss/designs/BUFFER_OTA_1.sch
+.subckt BUFFER_OTA_1 VDD vip vin vout ibias_n_5u VSS
+*.iopin VDD
+*.iopin VSS
+*.ipin vip
+*.ipin ibias_n_5u
+*.opin vout
+*.ipin vin
+XM1 vn2 ibias_n_5u VSS VSS nfet_05v0 L=2u W=3u nf=1 ad='int((nf+1)/2) * W/nf * 0.18u' as='int((nf+2)/2) * W/nf * 0.18u' pd='2*int((nf+1)/2)
++ * (W/nf + 0.18u)' ps='2*int((nf+2)/2) * (W/nf + 0.18u)' nrd='0.18u / W' nrs='0.18u / W' sa=0 sb=0 sd=0 m=16
+XM2 ibias_n_5u ibias_n_5u VSS VSS nfet_05v0 L=2u W=3u nf=1 ad='int((nf+1)/2) * W/nf * 0.18u' as='int((nf+2)/2) * W/nf * 0.18u' pd='2*int((nf+1)/2)
++ * (W/nf + 0.18u)' ps='2*int((nf+2)/2) * (W/nf + 0.18u)' nrd='0.18u / W' nrs='0.18u / W' sa=0 sb=0 sd=0
+XM3 vn1 vin vn2 vn2 nfet_05v0 L=2u W=30u nf=6 ad='int((nf+1)/2) * W/nf * 0.18u' as='int((nf+2)/2) * W/nf * 0.18u' pd='2*int((nf+1)/2)
++ * (W/nf + 0.18u)' ps='2*int((nf+2)/2) * (W/nf + 0.18u)' nrd='0.18u / W' nrs='0.18u / W' sa=0 sb=0 sd=0 m=3
+XM4 vx vip vn2 vn2 nfet_05v0 L=2u W=30u nf=6 ad='int((nf+1)/2) * W/nf * 0.18u' as='int((nf+2)/2) * W/nf * 0.18u' pd='2*int((nf+1)/2)
++ * (W/nf + 0.18u)' ps='2*int((nf+2)/2) * (W/nf + 0.18u)' nrd='0.18u / W' nrs='0.18u / W' sa=0 sb=0 sd=0 m=3
+XM5 vx vn1 VDD VDD pfet_05v0 L=2u W=30u nf=3 ad='int((nf+1)/2) * W/nf * 0.18u' as='int((nf+2)/2) * W/nf * 0.18u' pd='2*int((nf+1)/2)
++ * (W/nf + 0.18u)' ps='2*int((nf+2)/2) * (W/nf + 0.18u)' nrd='0.18u / W' nrs='0.18u / W' sa=0 sb=0 sd=0 m=4
+XM6 vn1 vn1 VDD VDD pfet_05v0 L=2u W=30u nf=3 ad='int((nf+1)/2) * W/nf * 0.18u' as='int((nf+2)/2) * W/nf * 0.18u' pd='2*int((nf+1)/2)
++ * (W/nf + 0.18u)' ps='2*int((nf+2)/2) * (W/nf + 0.18u)' nrd='0.18u / W' nrs='0.18u / W' sa=0 sb=0 sd=0 m=4
+XM8 vout vx VDD VDD pfet_05v0 L=2u W=30u nf=6 ad='int((nf+1)/2) * W/nf * 0.18u' as='int((nf+2)/2) * W/nf * 0.18u' pd='2*int((nf+1)/2)
++ * (W/nf + 0.18u)' ps='2*int((nf+2)/2) * (W/nf + 0.18u)' nrd='0.18u / W' nrs='0.18u / W' sa=0 sb=0 sd=0 m=8
+XM10 vout ibias_n_5u VSS VSS nfet_05v0 L=2u W=3u nf=1 ad='int((nf+1)/2) * W/nf * 0.18u' as='int((nf+2)/2) * W/nf * 0.18u' pd='2*int((nf+1)/2)
++ * (W/nf + 0.18u)' ps='2*int((nf+2)/2) * (W/nf + 0.18u)' nrd='0.18u / W' nrs='0.18u / W' sa=0 sb=0 sd=0 m=80
+XC4 net1 vx cap_mim_2f0fF c_width=1e-6 c_length=1e-6 m=500
+XR39 vout net1 vss ppolyf_u_1k r_width=1e-6 r_length=3e-6
+.ends
+
+.GLOBAL GND
+.end
